@@ -74,6 +74,11 @@
           <i class="bi bi-clipboard-data"></i> Inventario
         </button>
       </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSupply" type="button" role="tab">
+        <i class="bi bi-bell"></i> Alertas & Pedidos
+        </button>
+      </li>
     </ul>
 
     <div class="tab-content">
@@ -159,6 +164,15 @@
                   <input type="file" class="form-control" id="pr_img" accept="image/*">
                   <small class="text-muted">JPG/PNG. Opcional.</small>
                 </div>
+                <div class="mb-3">
+  <label class="form-label">Descripción</label>
+  <input class="form-control" id="pr_desc" placeholder="Opcional">
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Categoría</label>
+  <input class="form-control" id="pr_cat" placeholder="Ej: chamarra, pantalón, etc.">
+</div>
 
                 <div class="row g-2">
                   <div class="col-6 mb-3">
@@ -334,6 +348,111 @@
 
     </div>
   </div>
+  <!-- ===================== ALERTAS & PEDIDOS PROVEEDOR ===================== -->
+<div class="tab-pane fade" id="tabSupply" role="tabpanel">
+  <div class="row g-4 mt-1">
+
+    <!-- Alertas -->
+    <div class="col-lg-6">
+      <div class="card p-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h5 class="fw-bold mb-0" style="color: burlywood;">Alertas de stock (pendientes)</h5>
+            <small class="text-muted">Generadas cuando stock_actual ≤ stock_minimo.</small>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary" id="btnReloadAlertas">
+            <i class="bi bi-arrow-clockwise"></i> Recargar
+          </button>
+        </div>
+
+        <div class="row g-2 mt-3">
+          <div class="col-6">
+            <label class="form-label">Cantidad a encargar</label>
+            <input type="number" min="1" class="form-control" id="al_cant" value="10">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Nota (opcional)</label>
+            <input class="form-control" id="al_nota" placeholder="Urgente / reposición...">
+          </div>
+        </div>
+
+        <div class="table-responsive mt-3">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Proveedor</th>
+                <th>Faltan</th>
+                <th style="width:160px;">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="alertasBody">
+              <tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pedidos proveedor -->
+    <div class="col-lg-6">
+      <div class="card p-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h5 class="fw-bold mb-0" style="color: burlywood;">Pedidos a proveedor</h5>
+            <small class="text-muted">Seguimiento y recepción (actualiza stock).</small>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary" id="btnReloadPedidosProv">
+            <i class="bi bi-arrow-clockwise"></i> Recargar
+          </button>
+        </div>
+
+        <div class="row g-2 mt-3">
+          <div class="col-6">
+            <label class="form-label">Nuevo estado</label>
+            <select class="form-select" id="pp_estado">
+              <option value="creado">creado</option>
+              <option value="enviado">enviado</option>
+              <option value="confirmado">confirmado</option>
+              <option value="en_transito">en_transito</option>
+              <option value="recibido">recibido</option>
+              <option value="cancelado">cancelado</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Recibir (cantidad)</label>
+            <input type="number" min="1" class="form-control" id="pp_recibir" value="1">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Comentario (opcional)</label>
+            <input class="form-control" id="pp_coment" placeholder="Sale hoy / llega parcial / etc.">
+          </div>
+        </div>
+
+        <div class="table-responsive mt-3">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Producto</th>
+                <th>Prov.</th>
+                <th>Solic.</th>
+                <th>Rec.</th>
+                <th>Estado</th>
+                <th style="width:190px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="pedidosProvBody">
+              <tr><td colspan="7" class="text-center text-muted">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
 
   <!-- ===================== MODALES ===================== -->
 

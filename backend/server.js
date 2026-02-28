@@ -10,7 +10,12 @@ const interaccionesRoutes = require("./src/routes/interacciones.routes");
 const metricasRoutes = require("./src/routes/metricas.routes");
 const proveedoresRoutes = require("./src/routes/proveedores.routes");
 const productosRoutes = require("./src/routes/productos.routes");
-const inventarioRoutes = require("./src/routes/inventario.routes"); // ✅ IMPORTANTE
+const inventarioRoutes = require("./src/routes/inventario.routes"); 
+const pedidosProveedorRoutes = require("./src/routes/pedidosProveedor.routes");
+const alertasStockRoutes = require("./src/routes/alertasStock.routes");
+
+
+
 
 const app = express();
 app.use(cors());
@@ -31,6 +36,8 @@ app.use("/api/metricas", metricasRoutes);
 app.use("/api/proveedores", proveedoresRoutes);
 app.use("/api/productos", productosRoutes);
 app.use("/api/inventario", inventarioRoutes);
+app.use("/api/pedidos-proveedor", pedidosProveedorRoutes);
+app.use("/api/alertas-stock", alertasStockRoutes);
 
 const PORT = process.env.PORT || 3001;
 

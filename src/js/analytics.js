@@ -1,5 +1,6 @@
 // src/js/analytics.js
 let chart;
+let chartEstrategias;
 
 function showAlert(type, text) {
   const box = document.getElementById("alertBox");
@@ -70,6 +71,57 @@ function renderChart(rows) {
     }
   });
 }
+function contarEstrategias(productos) {
+  let pull = 0;
+  let push = 0;
+  let otras = 0;
+
+  for (const p of productos) {
+    const est = String(p.estrategia_logistica || "").trim().toUpperCase();
+    if (est === "PULL") pull++;
+    else if (est === "PUSH") push++;
+    else otras++;
+  }
+
+  return { pull, push, otras };
+}
+
+function renderChartEstrategias({ pull, push, otras }) {
+  const ctx = document.getElementById("chartEstrategias");
+  if (!ctx) return;
+
+  if (chartEstrategias) chartEstrategias.destroy();
+
+  const labels = ["PULL", "PUSH"];
+  const data = [pull, push];
+
+  // Si hay estrategias vacías/raras, las mostramos como "OTRAS"
+  if (otras > 0) {
+    labels.push("OTRAS");
+    data.push(otras);
+  }
+
+  chartEstrategias = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels,
+      datasets: [{ data }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: "bottom" }
+      }
+    }
+  });
+}
+
+async function loadEstrategiasProductos() {
+  // OJO: si /productos requiere token admin, esto debe estar protegido como admin (como ya tienes en analytics)
+  const productos = await apiFetch("/productos", { method: "GET" });
+  const conteo = contarEstrategias(productos);
+  renderChartEstrategias(conteo);
+}
 
 async function loadHistorico() {
   const rows = await apiFetch("/metricas/historico"); // requiere token
@@ -86,6 +138,8 @@ async function generarSnapshot() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
+    await loadEstrategiasProductos();
+    await loadInventarioMetrics();
     await loadHistorico();
     document.getElementById("btnSnapshot").addEventListener("click", generarSnapshot);
     document.getElementById("btnRefresh").addEventListener("click", loadHistorico);
@@ -93,4 +147,46 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.error(e);
     showAlert("danger", "❌ No se pudieron cargar métricas: " + e.message);
   }
+
+  async function loadInventarioMetrics() {
+  // Top / bottom vendidos
+  const top = await apiFetch("/metricas/productos/top?limit=10");
+  const bottom = await apiFetch("/metricas/productos/bottom?limit=10");
+  const bajo = await apiFetch("/metricas/inventario/bajo");
+
+  const topEl = document.getElementById("topProductos");
+  const bottomEl = document.getElementById("bottomProductos");
+  const bajoEl = document.getElementById("invBajo");
+
+  if (topEl) {
+    topEl.innerHTML = "";
+    top.forEach(p => {
+      const li = document.createElement("li");
+      li.textContent = `${p.nombre} — ${p.unidades_vendidas} vendidos`;
+      topEl.appendChild(li);
+    });
+  }
+
+  if (bottomEl) {
+    bottomEl.innerHTML = "";
+    bottom.forEach(p => {
+      const li = document.createElement("li");
+      li.textContent = `${p.nombre} — ${p.unidades_vendidas} vendidos`;
+      bottomEl.appendChild(li);
+    });
+  }
+
+  if (bajoEl) {
+    bajoEl.innerHTML = "";
+    bajo.slice(0, 10).forEach(p => {
+      const li = document.createElement("li");
+      li.textContent = `${p.nombre} (stock ${p.stock_actual}/${p.stock_minimo})`;
+      bajoEl.appendChild(li);
+    });
+
+    if (!bajo.length) {
+      bajoEl.innerHTML = `<li class="text-muted">✅ No hay productos bajo mínimo</li>`;
+    }
+  }
+}
 });

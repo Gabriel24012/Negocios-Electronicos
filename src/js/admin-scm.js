@@ -1,3 +1,8 @@
+function esPedidoAbierto(p) {
+  const est = String(p.estado || "").toLowerCase();
+  return ["creado", "enviado", "confirmado", "en_transito"].includes(est);
+}
+
 // src/js/admin-scm.js
 (function () {
   const token = localStorage.getItem("token");
@@ -5,6 +10,8 @@
 
   const warn = document.getElementById("adminWarn");
   const msgBox = document.getElementById("msgBox");
+  
+  
 
   // protecciones
   if (!token) {
@@ -33,6 +40,20 @@
   const provBody = document.getElementById("provBody");
   const prodBody = document.getElementById("prodBody");
   const histBody = document.getElementById("histBody");
+
+  // ---- NUEVO: alertas y pedidos proveedor
+const alertasBody = document.getElementById("alertasBody");
+const pedidosProvBody = document.getElementById("pedidosProvBody");
+
+const btnReloadAlertas = document.getElementById("btnReloadAlertas");
+const btnReloadPedidosProv = document.getElementById("btnReloadPedidosProv");
+
+const al_cant = document.getElementById("al_cant");
+const al_nota = document.getElementById("al_nota");
+
+const pp_estado = document.getElementById("pp_estado");
+const pp_recibir = document.getElementById("pp_recibir");
+const pp_coment = document.getElementById("pp_coment");
 
   const formProveedor = document.getElementById("formProveedor");
   const formProducto = document.getElementById("formProducto");
@@ -118,6 +139,15 @@
     const qs = estr ? `?estrategia=${encodeURIComponent(estr)}` : "";
 
     PRODUCTOS = await apiFetch("/productos" + qs, { method: "GET" });
+    PRODUCTOS = PRODUCTOS.map(p => ({
+  ...p,
+  // Normaliza stock
+  stock: p.stock ?? p.stock_actual ?? 0,
+  stock_actual: p.stock_actual ?? p.stock ?? 0,
+  // Normaliza precio/costo
+  precio: p.precio ?? p.costo_unitario ?? 0,
+  costo_unitario: p.costo_unitario ?? p.precio ?? 0
+}));
 
     const provMap = new Map(PROVEEDORES.map(p => [p.id, p.nombre]));
 
@@ -127,7 +157,7 @@
         <td>${escapeHtml(pr.nombre)}</td>
         <td class="mono">${escapeHtml(pr.sku)}</td>
         <td>$${Number(pr.precio ?? 0).toFixed(2)}</td>
-        <td>${Number(pr.stock ?? 0)}</td>
+        <td>${Number(pr.stock_actual ?? pr.stock ?? 0)}</td>
         <td>${Number(pr.stock_minimo ?? 0)}</td>
         <td>${escapeHtml(provMap.get(pr.proveedor_id) || ("#" + pr.proveedor_id))}</td>
         <td><span class="badge tag-burly">${escapeHtml(pr.estrategia_logistica || "")}</span></td>
@@ -232,6 +262,73 @@
     if (action === "del-prov") openDeleteProveedor(id);
     if (action === "edit-prod") openEditProducto(id);
     if (action === "del-prod") openDeleteProducto(id);
+
+    // ---- NUEVO: crear pedido desde alerta
+if (action === "crear-pedido") {
+  const productoId = Number(btn.dataset.producto);
+  (async () => {
+    try {
+      const cantidad = Number(al_cant?.value || 0);
+      const nota = (al_nota?.value || "").trim();
+
+      await apiFetch(`/alertas-stock/${productoId}/crear-pedido`, {
+        method: "POST",
+        body: JSON.stringify({
+          cantidad_a_encargar: cantidad || 10,
+          nota
+        })
+      });
+
+      showMsg("✅ Pedido creado desde alerta", "success");
+      await loadAlertas();
+      await loadPedidosProveedor();
+    } catch (err) {
+      showMsg("❌ " + err.message, "danger");
+    }
+  })();
+}
+
+// ---- NUEVO: cambiar estado pedido proveedor
+if (action === "pp-estado") {
+  const id = Number(btn.dataset.id);
+  (async () => {
+    try {
+      await apiFetch(`/pedidos-proveedor/${id}/estado`, {
+        method: "PUT",
+        body: JSON.stringify({
+          estado: pp_estado?.value || "enviado",
+          comentario: (pp_coment?.value || "").trim()
+        })
+      });
+      showMsg("✅ Estado actualizado", "success");
+      await loadPedidosProveedor();
+    } catch (err) {
+      showMsg("❌ " + err.message, "danger");
+    }
+  })();
+}
+
+// ---- NUEVO: recibir pedido proveedor (suma stock)
+if (action === "pp-recibir") {
+  const id = Number(btn.dataset.id);
+  (async () => {
+    try {
+      const qty = Number(pp_recibir?.value || 0);
+      await apiFetch(`/pedidos-proveedor/${id}/recibir`, {
+        method: "PUT",
+        body: JSON.stringify({
+          cantidad_recibida: qty || 1,
+          comentario: (pp_coment?.value || "").trim()
+        })
+      });
+      showMsg("✅ Recepción registrada (stock actualizado)", "success");
+      await loadPedidosProveedor();
+      await loadProductos(); // para reflejar stock en tu tabla productos
+    } catch (err) {
+      showMsg("❌ " + err.message, "danger");
+    }
+  })();
+}
   });
 
   // ---------- EDIT PROVEEDOR ----------
@@ -306,6 +403,7 @@
     document.getElementById("epr_sku").value = pr.sku ?? "";
     document.getElementById("epr_precio").value = Number(pr.precio ?? 0);
     document.getElementById("epr_stock").value = Number(pr.stock ?? 0);
+    document.getElementById("epr_stock").value = Number(pr.stock_actual ?? pr.stock ?? 0);
     document.getElementById("epr_min").value = Number(pr.stock_minimo ?? 0);
     document.getElementById("epr_estr").value = pr.estrategia_logistica ?? "PULL";
 
@@ -456,18 +554,109 @@
     catch (e) { showMsg("❌ " + e.message, "danger"); }
   });
 
+  btnReloadAlertas?.addEventListener("click", async () => {
+  try { await loadAlertas(); }
+  catch (e) { showMsg("❌ " + e.message, "danger"); }
+});
+
+btnReloadPedidosProv?.addEventListener("click", async () => {
+  try { await loadPedidosProveedor(); }
+  catch (e) { showMsg("❌ " + e.message, "danger"); }
+});
+
   filterEstr?.addEventListener("change", async () => {
     try { await loadProductos(); }
     catch (e) { showMsg("❌ " + e.message, "danger"); }
   });
 
+  async function loadAlertas() {
+  if (!alertasBody) return;
+
+  // 1) Traer alertas pendientes
+  const alertas = await apiFetch("/alertas-stock?status=pendiente", { method: "GET" });
+
+  // 2) Traer pedidos proveedor (para detectar si ya hay pedido abierto)
+  const pedidos = await apiFetch("/pedidos-proveedor", { method: "GET" });
+
+  // mapa: producto_id -> pedido abierto más reciente
+  const pedidoAbiertoPorProducto = new Map();
+  for (const p of pedidos) {
+    if (!esPedidoAbierto(p)) continue;
+    // como viene ORDER BY id DESC, el primero que encontremos será el más nuevo
+    if (!pedidoAbiertoPorProducto.has(p.producto_id)) {
+      pedidoAbiertoPorProducto.set(p.producto_id, p);
+    }
+  }
+
+  if (!alertas.length) {
+    alertasBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">✅ Sin alertas pendientes</td></tr>`;
+    return;
+  }
+
+  alertasBody.innerHTML = alertas.map(a => {
+    const pedidoAbierto = pedidoAbiertoPorProducto.get(a.producto_id);
+
+    const accionHtml = pedidoAbierto
+      ? `<span class="badge bg-success">✅ Pedido en proceso (#${pedidoAbierto.id})</span>`
+      : `
+        <button class="btn btn-sm btn-burly"
+                data-action="crear-pedido"
+                data-producto="${a.producto_id}">
+          Crear pedido
+        </button>
+      `;
+
+    return `
+      <tr>
+        <td>${escapeHtml(a.producto_nombre)}</td>
+        <td>${escapeHtml(a.proveedor_nombre)}</td>
+        <td><span class="badge bg-warning text-dark">${Number(a.faltan)}</span></td>
+        <td>${accionHtml}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function loadPedidosProveedor() {
+  if (!pedidosProvBody) return;
+
+  const rows = await apiFetch("/pedidos-proveedor", { method: "GET" });
+
+  if (!rows.length) {
+    pedidosProvBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">Sin pedidos aún.</td></tr>`;
+    return;
+  }
+
+  pedidosProvBody.innerHTML = rows.map(p => `
+    <tr>
+      <td>${p.id}</td>
+      <td>${escapeHtml(p.producto_nombre)}</td>
+      <td>${escapeHtml(p.proveedor_nombre)}</td>
+      <td>${Number(p.cantidad_solicitada)}</td>
+      <td>${Number(p.cantidad_recibida)}</td>
+      <td><span class="badge bg-dark">${escapeHtml(p.estado)}</span></td>
+      <td class="d-flex gap-1 flex-wrap">
+        <button class="btn btn-sm btn-outline-primary"
+                data-action="pp-estado" data-id="${p.id}">
+          Estado
+        </button>
+        <button class="btn btn-sm btn-outline-success"
+                data-action="pp-recibir" data-id="${p.id}">
+          Recibir
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
   // init
   (async () => {
-    try {
-      await loadProveedores();
-      await loadProductos();
-    } catch (err) {
-      showMsg("❌ " + err.message, "danger");
-    }
-  })();
+  try {
+    await loadProveedores();
+    await loadProductos();
+    await loadAlertas();
+    await loadPedidosProveedor();
+  } catch (err) {
+    showMsg("❌ " + err.message, "danger");
+  }
+})();
 })();

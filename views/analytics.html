@@ -117,6 +117,39 @@
       </div>
     </div>
 
+    <!-- ====== NUEVO: Métricas de Inventario ====== -->
+<div class="card p-3 mt-4">
+  <h5 class="mb-3">Métricas de Inventario</h5>
+
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <h6 class="text-muted">Top vendidos</h6>
+      <ol id="topProductos" class="mb-0"></ol>
+    </div>
+
+    <div class="col-lg-4">
+      <h6 class="text-muted">Menos vendidos</h6>
+      <ol id="bottomProductos" class="mb-0"></ol>
+    </div>
+
+    <div class="col-lg-4">
+      <h6 class="text-muted">Inventario bajo</h6>
+      <ul id="invBajo" class="mb-0"></ul>
+    </div>
+
+    <!-- Chart: PULL vs PUSH -->
+<div class="card p-3 mb-4">
+  <h5 class="mb-3">Productos por estrategia logística (PULL vs PUSH)</h5>
+
+  <div style="max-width: 500px; margin: auto;">
+    <canvas id="chartEstrategias"></canvas>
+  </div>
+</div>
+  </div>
+
+  
+</div>
+
   </div>
 
   <footer class="bg-dark text-center text-white py-3 mt-5">
