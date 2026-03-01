@@ -24,7 +24,7 @@ router.post("/seed", (req, res) => {
 
   db.prepare(
     `INSERT INTO usuarios (nombre, email, passwordHash, rol)
-     VALUES (?, ?, ?, ?)`
+    VALUES (?, ?, ?, ?)`
   ).run("Administrador", email, hash, "admin");
 
   res.json({
