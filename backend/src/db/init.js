@@ -178,8 +178,84 @@ function initDB() {
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
     )
   `).run();
+  // ✅ ERP: órdenes empresariales
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS ordenes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cliente_id INTEGER NOT NULL,
+      fecha TEXT NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'pendiente', -- pendiente/procesada/cancelada
+      total REAL NOT NULL DEFAULT 0,
+      usuario_id INTEGER,
+      FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE RESTRICT,
+      FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+    )
+  `).run();
 
-  return db;
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS ordenes_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      orden_id INTEGER NOT NULL,
+      producto_id INTEGER NOT NULL,
+      cantidad INTEGER NOT NULL,
+      precio REAL NOT NULL,
+      FOREIGN KEY (orden_id) REFERENCES ordenes(id) ON DELETE CASCADE,
+      FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE RESTRICT
+    )
+  `).run();
+
+  // ✅ ERP: madurez / estado
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS erp_estado (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      nivel TEXT NOT NULL DEFAULT 'Básico'
+    )
+  `).run();
+
+  // asegurar fila única
+  db.prepare(`
+    INSERT OR IGNORE INTO erp_estado (id, nivel)
+    VALUES (1, 'Básico')
+  `).run();
+    db.prepare(`
+    CREATE TABLE IF NOT EXISTS procesos_erp (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT NOT NULL UNIQUE,
+      nombre TEXT NOT NULL,
+      descripcion TEXT NOT NULL DEFAULT '',
+      estado TEXT NOT NULL DEFAULT 'activo',
+      progreso INTEGER NOT NULL DEFAULT 0,
+      fecha_inicio TEXT NOT NULL,
+      referencia TEXT NOT NULL DEFAULT ''
+    )
+  `).run();
+
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS recursos_erp (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT NOT NULL UNIQUE,
+      nombre TEXT NOT NULL,
+      tipo TEXT NOT NULL,
+      departamento TEXT NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'disponible'
+    )
+  `).run();
+
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS mensajes_cliente (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cliente_id INTEGER NOT NULL,
+      admin_id INTEGER,
+      asunto TEXT NOT NULL,
+      mensaje TEXT NOT NULL,
+      prioridad TEXT NOT NULL DEFAULT 'normal',
+      leido INTEGER NOT NULL DEFAULT 0,
+      fecha_envio TEXT NOT NULL,
+      fecha_lectura TEXT DEFAULT NULL,
+      FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE,
+      FOREIGN KEY (admin_id) REFERENCES usuarios(id) ON DELETE SET NULL
+    )
+  `).run();
 }
 
 function getDB() {

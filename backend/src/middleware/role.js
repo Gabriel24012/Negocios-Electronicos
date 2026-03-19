@@ -1,18 +1,20 @@
-// backend/src/middleware/role.js
-function requireRole(...rolesPermitidos) {
+function requireRole(...allowedRoles) {
   return (req, res, next) => {
-    if (!req.user) return res.status(401).json({ error: "No autenticado" });
+    if (!req.user) {
+      return res.status(401).json({ error: "No autorizado" });
+    }
 
-    const rol = req.user.rol;
-    if (!rolesPermitidos.includes(rol)) {
-      return res.status(403).json({ error: "Acceso denegado (rol insuficiente)" });
+    if (!allowedRoles.includes(req.user.rol)) {
+      return res.status(403).json({ error: "Acceso denegado" });
     }
 
     next();
   };
 }
 
-// Alias directo para admin (lo que tú estás intentando usar)
 const requireAdmin = requireRole("admin");
 
-module.exports = { requireRole, requireAdmin };
+module.exports = {
+  requireRole,
+  requireAdmin
+};
