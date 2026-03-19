@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { getDB } = require("../db/init");
+const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -121,6 +122,68 @@ router.post("/login", (req, res) => {
     token,
     user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol }
   });
+});
+
+/**
+ * GET /api/auth/me
+ * Obtiene perfil del usuario autenticado
+ */
+router.get("/me", auth, (req, res) => {
+  const db = getDB();
+  const user = db.prepare(`
+    SELECT id, nombre, email, rol, telefono, direccion, codigo_postal
+    FROM usuarios
+    WHERE id = ?
+  `).get(req.user.id);
+
+  if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+  res.json({ user });
+});
+
+/**
+ * PUT /api/auth/me
+ * Actualiza perfil del usuario autenticado
+ */
+router.put("/me", auth, (req, res) => {
+  const { nombre, telefono = "", direccion = "", codigo_postal = "" } = req.body || {};
+  if (!nombre || !String(nombre).trim()) {
+    return res.status(400).json({ error: "El nombre es obligatorio" });
+  }
+
+  const db = getDB();
+  const user = db.prepare("SELECT * FROM usuarios WHERE id = ?").get(req.user.id);
+  if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+  db.prepare(`
+    UPDATE usuarios
+    SET nombre = ?, telefono = ?, direccion = ?, codigo_postal = ?
+    WHERE id = ?
+  `).run(
+    String(nombre).trim(),
+    String(telefono).trim(),
+    String(direccion).trim(),
+    String(codigo_postal).trim(),
+    req.user.id
+  );
+
+  // Keep "clientes" aligned by email when it exists.
+  db.prepare(`
+    UPDATE clientes
+    SET nombre = ?, telefono = ?
+    WHERE correo = ?
+  `).run(
+    String(nombre).trim(),
+    String(telefono).trim(),
+    user.email
+  );
+
+  const updated = db.prepare(`
+    SELECT id, nombre, email, rol, telefono, direccion, codigo_postal
+    FROM usuarios
+    WHERE id = ?
+  `).get(req.user.id);
+
+  res.json({ ok: true, user: updated });
 });
 
 module.exports = router;

@@ -3,6 +3,14 @@ const Database = require("better-sqlite3");
 
 let db;
 
+function ensureColumn(table, column, definition) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  const exists = cols.some((c) => c.name === column);
+  if (!exists) {
+    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+  }
+}
+
 function initDB() {
   if (db) return db;
 
@@ -15,9 +23,17 @@ function initDB() {
       nombre TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       passwordHash TEXT NOT NULL,
-      rol TEXT NOT NULL DEFAULT 'usuario'
+      rol TEXT NOT NULL DEFAULT 'usuario',
+      telefono TEXT DEFAULT '',
+      direccion TEXT DEFAULT '',
+      codigo_postal TEXT DEFAULT ''
     )
   `).run();
+
+  // Migration for existing databases that do not include profile fields yet.
+  ensureColumn("usuarios", "telefono", "TEXT DEFAULT ''");
+  ensureColumn("usuarios", "direccion", "TEXT DEFAULT ''");
+  ensureColumn("usuarios", "codigo_postal", "TEXT DEFAULT ''");
 
   db.prepare(`
     CREATE TABLE IF NOT EXISTS clientes (
