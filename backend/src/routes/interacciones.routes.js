@@ -1,37 +1,73 @@
 const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const { getDB } = require("../db/init");
+const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
-router.post("/login", (req, res) => {
-  const { email, password } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: "Faltan datos" });
+// POST /api/interacciones
+router.post("/", auth, (req, res) => {
+  const { cliente_id, tipo, descripcion } = req.body || {};
+  const tiposValidos = ["llamada", "correo", "reunion", "seguimiento", "soporte"];
+
+  if (!cliente_id || !tipo || !descripcion) {
+    return res.status(400).json({ error: "Faltan datos" });
+  }
+
+  if (!tiposValidos.includes(tipo)) {
+    return res.status(400).json({ error: "Tipo inválido" });
+  }
+
+  const db = getDB();
+  const cliente = db.prepare("SELECT * FROM clientes WHERE id = ?").get(cliente_id);
+
+  if (!cliente) {
+    return res.status(404).json({ error: "Cliente no encontrado" });
+  }
+
+  const fecha = new Date().toISOString();
 
   try {
-    const db = getDB();
-    const user = db.prepare("SELECT * FROM usuarios WHERE email = ?").get(email);
-
-    if (!user) return res.status(401).json({ error: "Credenciales inválidas" });
-
-    const ok = bcrypt.compareSync(password, user.passwordHash);
-    if (!ok) return res.status(401).json({ error: "Credenciales inválidas" });
-
-    const token = jwt.sign(
-      { id: user.id, rol: user.rol, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: "2h" }
+    const result = db.prepare(`
+      INSERT INTO interacciones
+      (cliente_id, tipo, descripcion, fecha, usuario_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      cliente_id,
+      tipo,
+      descripcion.trim(),
+      fecha,
+      req.user.id
     );
 
-    res.json({
-      token,
-      user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol }
-    });
+    const interaccion = db.prepare(`
+      SELECT i.*, u.nombre AS usuario_nombre
+      FROM interacciones i
+      JOIN usuarios u ON u.id = i.usuario_id
+      WHERE i.id = ?
+    `).get(result.lastInsertRowid);
+
+    res.status(201).json(interaccion);
   } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: "Error en login" });
+    res.status(500).json({ error: "Error al registrar interacción", detail: e.message });
   }
+});
+
+// GET /api/interacciones/mias
+router.get("/mias", auth, (req, res) => {
+  const db = getDB();
+
+  const rows = db.prepare(`
+    SELECT
+      i.*,
+      c.nombre AS cliente_nombre,
+      c.correo AS cliente_correo
+    FROM interacciones i
+    JOIN clientes c ON c.id = i.cliente_id
+    WHERE i.usuario_id = ?
+    ORDER BY i.fecha DESC
+  `).all(req.user.id);
+
+  res.json(rows);
 });
 
 module.exports = router;

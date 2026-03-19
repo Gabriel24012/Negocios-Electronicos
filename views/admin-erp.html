@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin ERP — Thrift Cálido</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    body { background:#f8fafc; }
+    .btn-burly { background-color: burlywood; color:#fff; font-weight:600; }
+    .btn-burly:hover { filter:brightness(.92); color:#fff; }
+    .card { border:none; border-radius:14px; box-shadow:0 4px 10px rgba(0,0,0,.08); }
+    .table thead th { background:#0f172a; color:#fff; }
+    .tag-burly { background:burlywood; color:#111; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
+    <a class="navbar-brand d-flex align-items-center" href="../index.html">
+      <i class="bi bi-shop me-2" style="color: burlywood; font-size:1.4rem"></i>
+      <span style="color: burlywood; font-weight: bold;">Thrift Cálido Bazar</span>
+    </a>
+
+    <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
+      <a href="../index.html" class="btn btn-sm btn-burly">Inicio</a>
+      <a href="./admin-scm.html" class="btn btn-sm btn-outline-light">Admin SCM</a>
+      <a href="./admin-crm.html" class="btn btn-sm btn-outline-light">Admin CRM</a>
+      <a href="./admin-erp.html" class="btn btn-sm btn-outline-light active">Admin ERP</a>
+      <a href="./analytics.html" class="btn btn-sm btn-outline-light">Analytics</a>
+      <button class="btn btn-sm btn-outline-light" id="btnLogout" onclick="cerrarSesion()">
+        <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+      </button>
+      <span id="navUserName" class="text-white-50 small"></span>
+    </div>
+  </nav>
+
+  <script src="../src/js/guard.js" data-roles="admin,ventas,logistica"></script>
+
+  <div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1 class="fw-bold mb-0" style="color: burlywood;">Panel Admin — ERP</h1>
+        <small class="text-muted">Integración CRM + SCM + operaciones empresariales</small>
+      </div>
+      <span class="badge tag-burly px-3 py-2">ERP Integrado</span>
+    </div>
+
+    <div id="msgBox" class="mt-3"></div>
+
+    <ul class="nav nav-tabs mt-4" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabOrdenes" type="button" role="tab">
+          <i class="bi bi-receipt"></i> Órdenes
+        </button>
+      </li>
+
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabClientesERP" type="button" role="tab">
+          <i class="bi bi-people"></i> Clientes
+        </button>
+      </li>
+
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabInventarioERP" type="button" role="tab">
+          <i class="bi bi-box-seam"></i> Inventario
+        </button>
+      </li>
+
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabProcesosERP" type="button" role="tab">
+          <i class="bi bi-diagram-3"></i> Procesos
+        </button>
+      </li>
+
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabRecursosERP" type="button" role="tab">
+          <i class="bi bi-hdd-network"></i> Recursos
+        </button>
+      </li>
+
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabEstadoERP" type="button" role="tab">
+          <i class="bi bi-diagram-3"></i> Estado ERP
+        </button>
+      </li>
+
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMetricasERP" type="button" role="tab">
+          <i class="bi bi-bar-chart-line"></i> Métricas ERP
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+
+      <!-- ÓRDENES -->
+      <div class="tab-pane fade show active" id="tabOrdenes" role="tabpanel">
+        <div class="row g-4 mt-1">
+          <div class="col-lg-5">
+            <div class="card p-4">
+              <h5 class="fw-bold mb-3" style="color: burlywood;">Crear orden</h5>
+
+              <form id="formOrden">
+                <div class="mb-3">
+                  <label class="form-label">Cliente</label>
+                  <select class="form-select" id="ord_cliente" required>
+                    <option value="">Selecciona cliente...</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Producto</label>
+                  <select class="form-select" id="ord_producto">
+                    <option value="">Selecciona producto...</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Cantidad</label>
+                  <input type="number" min="1" class="form-control" id="ord_cantidad" value="1">
+                </div>
+
+                <button class="btn btn-outline-secondary w-100 mb-3" type="button" id="btnAgregarItem">
+                  <i class="bi bi-plus-circle"></i> Agregar producto
+                </button>
+
+                <div class="table-responsive mb-3">
+                  <table class="table table-sm align-middle">
+                    <thead>
+                      <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Subt.</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="ordenItemsBody"></tbody>
+                  </table>
+                </div>
+
+                <div class="d-flex justify-content-between mb-3">
+                  <strong>Total:</strong>
+                  <strong id="ordenTotal">$0.00</strong>
+                </div>
+
+                <button class="btn btn-burly w-100" type="submit">
+                  <i class="bi bi-save"></i> Crear orden
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="col-lg-7">
+            <div class="card p-4">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0" style="color: burlywood;">Lista de órdenes</h5>
+                <button class="btn btn-sm btn-outline-secondary" id="btnReloadOrdenes" type="button">
+                  <i class="bi bi-arrow-clockwise"></i> Recargar
+                </button>
+              </div>
+
+              <div class="table-responsive mt-3">
+                <table class="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Cliente</th>
+                      <th>Fecha</th>
+                      <th>Estado</th>
+                      <th>Total</th>
+                      <th style="width:260px;">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ordenesBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLIENTES ERP -->
+      <div class="tab-pane fade" id="tabClientesERP" role="tabpanel">
+        <div class="card p-4 mt-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+              <h5 class="fw-bold mb-0" style="color: burlywood;">Clientes integrados desde CRM</h5>
+              <small class="text-muted">Información consumida del módulo CRM existente</small>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" id="btnReloadClientesERP" type="button">
+              <i class="bi bi-arrow-clockwise"></i> Recargar
+            </button>
+          </div>
+
+          <div class="table-responsive mt-3">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>Correo</th>
+                  <th>Empresa</th>
+                  <th>Estado</th>
+                  <th>Etapa CRM</th>
+                </tr>
+              </thead>
+              <tbody id="clientesERPBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- INVENTARIO ERP -->
+      <div class="tab-pane fade" id="tabInventarioERP" role="tabpanel">
+        <div class="card p-4 mt-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+              <h5 class="fw-bold mb-0" style="color: burlywood;">Inventario integrado desde SCM</h5>
+              <small class="text-muted">Productos y stock consumidos del módulo SCM</small>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" id="btnReloadInventarioERP" type="button">
+              <i class="bi bi-arrow-clockwise"></i> Recargar
+            </button>
+          </div>
+
+          <div class="table-responsive mt-3">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Producto</th>
+                  <th>Stock</th>
+                  <th>Mínimo</th>
+                  <th>Estrategia</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="inventarioERPBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROCESOS ERP -->
+      <div class="tab-pane fade" id="tabProcesosERP" role="tabpanel">
+        <div class="row g-4 mt-1">
+          <div class="col-lg-4">
+            <div class="card p-4">
+              <h5 class="fw-bold mb-3" style="color: burlywood;">Nuevo proceso interno</h5>
+
+              <form id="formProcesoERP">
+                <div class="mb-3">
+                  <label class="form-label">Código</label>
+                  <input class="form-control" id="pro_codigo" placeholder="Ej: PRC-001" required>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Nombre</label>
+                  <input class="form-control" id="pro_nombre" required>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Descripción</label>
+                  <textarea class="form-control" id="pro_descripcion" rows="3"></textarea>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Estado</label>
+                  <select class="form-select" id="pro_estado">
+                    <option value="activo">activo</option>
+                    <option value="pausado">pausado</option>
+                    <option value="completado">completado</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Progreso (%)</label>
+                  <input type="number" min="0" max="100" class="form-control" id="pro_progreso" value="0">
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Referencia</label>
+                  <input class="form-control" id="pro_referencia" placeholder="Ej: orden:3">
+                </div>
+
+                <button class="btn btn-burly w-100" type="submit">Guardar proceso</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="col-lg-8">
+            <div class="card p-4">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0" style="color: burlywood;">Procesos internos</h5>
+                <button class="btn btn-sm btn-outline-secondary" id="btnReloadProcesosERP" type="button">
+                  <i class="bi bi-arrow-clockwise"></i> Recargar
+                </button>
+              </div>
+
+              <div class="row g-3 mt-2" id="procesosERPGrid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECURSOS ERP -->
+      <div class="tab-pane fade" id="tabRecursosERP" role="tabpanel">
+        <div class="row g-4 mt-1">
+          <div class="col-lg-4">
+            <div class="card p-4">
+              <h5 class="fw-bold mb-3" style="color: burlywood;">Nuevo recurso empresarial</h5>
+
+              <form id="formRecursoERP">
+                <div class="mb-3">
+                  <label class="form-label">Código</label>
+                  <input class="form-control" id="rec_codigo" placeholder="Ej: REC-001" required>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Nombre</label>
+                  <input class="form-control" id="rec_nombre" required>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Tipo</label>
+                  <select class="form-select" id="rec_tipo">
+                    <option value="humano">humano</option>
+                    <option value="material">material</option>
+                    <option value="tecnologico">tecnologico</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Departamento</label>
+                  <input class="form-control" id="rec_departamento" required>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Estado</label>
+                  <select class="form-select" id="rec_estado">
+                    <option value="disponible">disponible</option>
+                    <option value="asignado">asignado</option>
+                    <option value="mantenimiento">mantenimiento</option>
+                  </select>
+                </div>
+
+                <button class="btn btn-burly w-100" type="submit">Guardar recurso</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="col-lg-8">
+            <div class="card p-4">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0" style="color: burlywood;">Recursos empresariales</h5>
+                <button class="btn btn-sm btn-outline-secondary" id="btnReloadRecursosERP" type="button">
+                  <i class="bi bi-arrow-clockwise"></i> Recargar
+                </button>
+              </div>
+
+              <div class="table-responsive mt-3">
+                <table class="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Código</th>
+                      <th>Nombre</th>
+                      <th>Tipo</th>
+                      <th>Departamento</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recursosERPBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ESTADO ERP -->
+      <div class="tab-pane fade" id="tabEstadoERP" role="tabpanel">
+        <div class="row g-4 mt-1">
+          <div class="col-lg-5">
+            <div class="card p-4">
+              <h5 class="fw-bold mb-3" style="color: burlywood;">Nivel de implementación ERP</h5>
+
+              <div class="mb-3">
+                <label class="form-label">Nivel actual</label>
+                <select class="form-select" id="erp_nivel">
+                  <option>Básico</option>
+                  <option>Integrado</option>
+                  <option>Automatizado</option>
+                  <option>Optimizado</option>
+                </select>
+              </div>
+
+              <button class="btn btn-burly w-100" id="btnGuardarNivelERP" type="button">
+                Guardar estado ERP
+              </button>
+            </div>
+          </div>
+
+          <div class="col-lg-7">
+            <div class="card p-4">
+              <h5 class="fw-bold mb-3" style="color: burlywood;">Madurez digital</h5>
+              <div class="progress" style="height: 28px;">
+                <div id="erpProgress" class="progress-bar progress-bar-striped" role="progressbar" style="width: 25%;">Básico</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MÉTRICAS ERP -->
+      <div class="tab-pane fade" id="tabMetricasERP" role="tabpanel">
+  <div class="row g-3 mt-1">
+    <div class="col-md-3">
+      <div class="card p-3 text-center">
+        <div class="text-muted">Ventas totales</div>
+        <div class="fs-4 fw-bold" id="kpiVentasERP">$0.00</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3 text-center">
+        <div class="text-muted">Órdenes</div>
+        <div class="fs-4 fw-bold" id="kpiOrdenesERP">0</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3 text-center">
+        <div class="text-muted">Productos vendidos</div>
+        <div class="fs-4 fw-bold" id="kpiProductosERP">0</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3 text-center">
+        <div class="text-muted">Inventario disponible</div>
+        <div class="fs-4 fw-bold" id="kpiInventarioERP">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-2">
+    <div class="col-lg-6">
+      <div class="card p-4 h-100">
+        <h5 class="fw-bold mb-3" style="color: burlywood;">Ventas mensuales</h5>
+        <div style="position:relative; width:100%; height:320px;">
+          <canvas id="chartVentasMensualesERP"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card p-4 h-100">
+        <h5 class="fw-bold mb-3" style="color: burlywood;">Órdenes por estado</h5>
+        <div style="position:relative; width:100%; height:320px;">
+          <canvas id="chartOrdenesEstadoERP"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card p-4 mt-4">
+    <h5 class="fw-bold mb-3" style="color: burlywood;">Resumen operativo ERP</h5>
+    <div style="position:relative; width:100%; height:360px;">
+      <canvas id="chartERPMetricas"></canvas>
+    </div>
+  </div>
+</div>
+
+  <footer class="bg-dark text-center text-white py-4 mt-5">
+    <p class="mb-0"><span style="color: burlywood; font-weight: bold;">&copy; 2025 Thrift Cálido Bazar</span> — Admin ERP</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../src/js/api.js"></script>
+  <script src="../src/js/navbar-role.js"></script>
+  <script src="../src/js/admin-erp.js"></script>
+  <script>
+    function cerrarSesion() {
+      clearSession();
+      window.location.href = "../login.html";
+    }
+  </script>
+</body>
+</html>

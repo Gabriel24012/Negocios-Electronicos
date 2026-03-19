@@ -10,12 +10,18 @@ const interaccionesRoutes = require("./src/routes/interacciones.routes");
 const metricasRoutes = require("./src/routes/metricas.routes");
 const proveedoresRoutes = require("./src/routes/proveedores.routes");
 const productosRoutes = require("./src/routes/productos.routes");
-const inventarioRoutes = require("./src/routes/inventario.routes"); 
+const inventarioRoutes = require("./src/routes/inventario.routes");
 const pedidosProveedorRoutes = require("./src/routes/pedidosProveedor.routes");
 const alertasStockRoutes = require("./src/routes/alertasStock.routes");
+const ordenesRoutes = require("./src/routes/ordenes.routes");
+const erpRoutes = require("./src/routes/erp.routes");
+const usuariosRoutes = require("./src/routes/usuarios.routes");
+const mensajesClienteRoutes = require("./src/routes/mensajesCliente.routes");
 
 
-
+// ✅ FALTABAN ESTAS DOS
+const procesosErpRoutes = require("./src/routes/procesosErp.routes");
+const recursosErpRoutes = require("./src/routes/recursosErp.routes");
 
 const app = express();
 app.use(cors());
@@ -38,6 +44,13 @@ app.use("/api/productos", productosRoutes);
 app.use("/api/inventario", inventarioRoutes);
 app.use("/api/pedidos-proveedor", pedidosProveedorRoutes);
 app.use("/api/alertas-stock", alertasStockRoutes);
+
+app.use("/api/ordenes", ordenesRoutes);
+app.use("/api/erp", erpRoutes);
+app.use("/api/procesos-erp", procesosErpRoutes);
+app.use("/api/recursos-erp", recursosErpRoutes);
+app.use("/api/usuarios", usuariosRoutes);
+app.use("/api/mensajes-cliente", mensajesClienteRoutes);
 
 const PORT = process.env.PORT || 3001;
 

@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin CRM — Thrift Cálido</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    body { background:#f8fafc; }
+    .btn-burly { background-color: burlywood; color:#fff; font-weight:600; }
+    .btn-burly:hover { filter:brightness(.92); color:#fff; }
+    .card { border:none; border-radius:14px; box-shadow:0 4px 10px rgba(0,0,0,.08); }
+    .table thead th { background:#0f172a; color:#fff; }
+    .tag-burly { background:burlywood; color:#111; }
+    .badge-prospecto { background:#6c757d; }
+    .badge-activo { background:#198754; }
+    .badge-frecuente { background:#0d6efd; }
+    .badge-inactivo { background:#dc3545; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
+    <a class="navbar-brand d-flex align-items-center" href="../index.html">
+      <i class="bi bi-shop me-2" style="color: burlywood; font-size:1.4rem"></i>
+      <span style="color: burlywood; font-weight: bold;">Thrift Cálido Bazar</span>
+    </a>
+
+    <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
+      <a href="../index.html" class="btn btn-sm btn-burly">Inicio</a>
+      <a href="./admin.html" id="btnAdmin" class="btn btn-sm btn-outline-light">Admin</a>
+      <a href="./admin-scm.html" class="btn btn-sm btn-outline-light">Admin SCM</a>
+      <a href="./admin-crm.html" class="btn btn-sm btn-outline-light active">Admin CRM</a>
+      <a href="./analytics.html" class="btn btn-sm btn-outline-light">Analytics</a>
+      <a href="../login.html" id="btnLogin" class="btn btn-sm btn-outline-light">Ingresar</a>
+      <button class="btn btn-sm btn-outline-light" id="btnLogout" onclick="cerrarSesion()">
+        <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+      </button>
+      <span id="navUserName" class="text-white-50 small"></span>
+    </div>
+  </nav>
+
+  <script src="../src/js/guard.js" data-roles="admin"></script>
+
+  <div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1 class="fw-bold mb-0" style="color: burlywood;">Panel Admin — CRM</h1>
+        <small class="text-muted">Gestión de clientes, interacciones, etapas CRM y métricas</small>
+      </div>
+      <span class="badge tag-burly px-3 py-2">Back-end conectado (JWT)</span>
+    </div>
+
+    <div id="adminWarn" class="alert alert-warning mt-3" style="display:none;"></div>
+    <div id="msgBox" class="mt-3"></div>
+
+    <ul class="nav nav-tabs mt-4" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabClientes" type="button" role="tab">
+          <i class="bi bi-people"></i> Clientes
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabInteracciones" type="button" role="tab">
+          <i class="bi bi-chat-left-text"></i> Interacciones
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMensajesCRM" type="button" role="tab">
+          <i class="bi bi-chat-dots"></i> Mensajes
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabActividad" type="button" role="tab">
+          <i class="bi bi-clock-history"></i> Mi actividad
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMetricasCRM" type="button" role="tab">
+          <i class="bi bi-bar-chart-line"></i> Métricas CRM
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+
+      <!-- CLIENTES -->
+      <div class="tab-pane fade show active" id="tabClientes" role="tabpanel">
+        <div class="row g-4 mt-1">
+          <div class="col-lg-4">
+            <div class="card p-4">
+              <h5 class="fw-bold mb-3" style="color: burlywood;">Alta de cliente</h5>
+              <form id="formCliente">
+                <div class="mb-3">
+                  <label class="form-label">Nombre</label>
+                  <input class="form-control" id="cl_nombre" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Correo</label>
+                  <input type="email" class="form-control" id="cl_correo" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Teléfono</label>
+                  <input class="form-control" id="cl_telefono">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Empresa</label>
+                  <input class="form-control" id="cl_empresa">
+                </div>
+                <div class="row g-2">
+                  <div class="col-6 mb-3">
+                    <label class="form-label">Estado</label>
+                    <select class="form-select" id="cl_estado">
+                      <option value="activo">activo</option>
+                      <option value="inactivo">inactivo</option>
+                    </select>
+                  </div>
+                  <div class="col-6 mb-3">
+                    <label class="form-label">Etapa CRM</label>
+                    <select class="form-select" id="cl_etapa">
+                      <option>Prospecto</option>
+                      <option>Activo</option>
+                      <option>Frecuente</option>
+                      <option>Inactivo</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button class="btn btn-burly w-100" type="submit">
+                  <i class="bi bi-plus-circle"></i> Guardar cliente
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="col-lg-8">
+            <div class="card p-4">
+              <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                  <label class="form-label">Buscar</label>
+                  <input class="form-control" id="f_q" placeholder="Nombre, correo o empresa">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Estado</label>
+                  <select class="form-select" id="f_estado">
+                    <option value="">Todos</option>
+                    <option value="activo">activo</option>
+                    <option value="inactivo">inactivo</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Etapa</label>
+                  <select class="form-select" id="f_etapa">
+                    <option value="">Todas</option>
+                    <option value="Prospecto">Prospecto</option>
+                    <option value="Activo">Activo</option>
+                    <option value="Frecuente">Frecuente</option>
+                    <option value="Inactivo">Inactivo</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <button class="btn btn-outline-secondary w-100" id="btnBuscarClientes" type="button">
+                    <i class="bi bi-search"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-responsive mt-4">
+                <table class="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nombre</th>
+                      <th>Correo</th>
+                      <th>Empresa</th>
+                      <th>Estado</th>
+                      <th>Etapa</th>
+                      <th style="width:220px;">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="clientesBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INTERACCIONES -->
+      <div class="tab-pane fade" id="tabInteracciones" role="tabpanel">
+        <div class="row g-4 mt-1">
+          <div class="col-lg-4">
+            <div class="card p-4">
+              <h5 class="fw-bold mb-3" style="color: burlywood;">Registrar interacción</h5>
+              <form id="formInteraccion">
+                <div class="mb-3">
+                  <label class="form-label">Cliente</label>
+                  <select class="form-select" id="in_cliente" required>
+                    <option value="">Selecciona cliente...</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Tipo</label>
+                  <select class="form-select" id="in_tipo">
+                    <option value="llamada">llamada</option>
+                    <option value="correo">correo</option>
+                    <option value="reunion">reunion</option>
+                    <option value="seguimiento">seguimiento</option>
+                    <option value="soporte">soporte</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Descripción</label>
+                  <textarea class="form-control" id="in_descripcion" rows="4" required></textarea>
+                </div>
+
+                <button class="btn btn-burly w-100" type="submit">
+                  <i class="bi bi-save"></i> Guardar interacción
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="col-lg-8">
+            <div class="card p-4">
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="fw-bold mb-0" style="color: burlywood;">Historial del cliente</h5>
+                <div class="d-flex gap-2">
+                  <select class="form-select form-select-sm" id="hist_cliente" style="width:auto;">
+                    <option value="">Selecciona cliente</option>
+                  </select>
+                  <button class="btn btn-sm btn-outline-secondary" id="btnVerHistorial" type="button">
+                    <i class="bi bi-arrow-clockwise"></i> Ver
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-3" id="historialBody">
+                <p class="text-muted mb-0">Selecciona un cliente para ver sus interacciones.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MENSAJES -->
+      <div class="tab-pane fade" id="tabMensajesCRM" role="tabpanel">
+        <div class="row g-4 mt-1">
+          <div class="col-lg-4">
+            <div class="card p-4">
+              <h5 class="fw-bold mb-3" style="color: burlywood;">Enviar mensaje al usuario</h5>
+              <p class="text-muted small">Este mensaje aparecerá en el perfil del cliente cuando inicie sesión.</p>
+
+              <form id="formMensajeCliente">
+                <div class="mb-3">
+                  <label class="form-label">Cliente</label>
+                  <select class="form-select" id="msg_cliente" required>
+                    <option value="">Selecciona cliente...</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Asunto</label>
+                  <input class="form-control" id="msg_asunto" maxlength="120" placeholder="Ej: Seguimiento de tu compra" required>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Prioridad</label>
+                  <select class="form-select" id="msg_prioridad">
+                    <option value="normal">normal</option>
+                    <option value="alta">alta</option>
+                    <option value="baja">baja</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Mensaje</label>
+                  <textarea class="form-control" id="msg_texto" rows="5" maxlength="600" placeholder="Escribe el mensaje que verá el usuario..." required></textarea>
+                </div>
+
+                <button class="btn btn-burly w-100" type="submit">
+                  <i class="bi bi-send"></i> Enviar mensaje
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="col-lg-8">
+            <div class="card p-4">
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                  <h5 class="fw-bold mb-0" style="color: burlywood;">Historial de mensajes</h5>
+                  <small class="text-muted">Seguimiento de lo enviado desde CRM</small>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" id="btnReloadMensajesCRM" type="button">
+                  <i class="bi bi-arrow-clockwise"></i> Recargar
+                </button>
+              </div>
+
+              <div class="table-responsive mt-3">
+                <table class="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Cliente</th>
+                      <th>Asunto</th>
+                      <th>Prioridad</th>
+                      <th>Enviado</th>
+                      <th>Lectura</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mensajesCRMBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MI ACTIVIDAD -->
+      <div class="tab-pane fade" id="tabActividad" role="tabpanel">
+        <div class="card p-4 mt-3">
+          <h5 class="fw-bold mb-3" style="color: burlywood;">Mi actividad</h5>
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Cliente</th>
+                  <th>Correo</th>
+                  <th>Tipo</th>
+                  <th>Descripción</th>
+                </tr>
+              </thead>
+              <tbody id="actividadBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- MÉTRICAS CRM -->
+      <div class="tab-pane fade" id="tabMetricasCRM" role="tabpanel">
+        <div class="row g-3 mt-1">
+          <div class="col-md-3">
+            <div class="card p-3 text-center">
+              <div class="text-muted">Total clientes</div>
+              <div class="fs-3 fw-bold" id="kpiTotalClientes">0</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card p-3 text-center">
+              <div class="text-muted">Activos</div>
+              <div class="fs-3 fw-bold" id="kpiActivosCRM">0</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card p-3 text-center">
+              <div class="text-muted">Inactivos</div>
+              <div class="fs-3 fw-bold" id="kpiInactivosCRM">0</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card p-3 text-center">
+              <div class="text-muted">Clientes en riesgo</div>
+              <div class="fs-3 fw-bold" id="kpiRiesgoCRM">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4 mt-1">
+          <div class="col-lg-6">
+            <div class="card p-4">
+              <h5 class="fw-bold mb-3" style="color: burlywood;">Clientes por etapa CRM</h5>
+              <div style="max-width: 450px; margin:auto;">
+                <canvas id="chartCRMEtapas"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="card p-4">
+              <h5 class="fw-bold mb-3" style="color: burlywood;">Clientes en riesgo</h5>
+              <div class="table-responsive">
+                <table class="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Correo</th>
+                      <th>Estado</th>
+                      <th>Última interacción</th>
+                    </tr>
+                  </thead>
+                  <tbody id="riesgoBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR CLIENTE -->
+  <div class="modal fade" id="modalEditCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" id="formEditCliente">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar cliente</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" id="ecl_id">
+
+          <div class="mb-3">
+            <label class="form-label">Nombre</label>
+            <input class="form-control" id="ecl_nombre" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Correo</label>
+            <input type="email" class="form-control" id="ecl_correo" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Teléfono</label>
+            <input class="form-control" id="ecl_telefono">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Empresa</label>
+            <input class="form-control" id="ecl_empresa">
+          </div>
+
+          <div class="row g-2">
+            <div class="col-6 mb-3">
+              <label class="form-label">Estado</label>
+              <select class="form-select" id="ecl_estado">
+                <option value="activo">activo</option>
+                <option value="inactivo">inactivo</option>
+              </select>
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Etapa CRM</label>
+              <select class="form-select" id="ecl_etapa">
+                <option>Prospecto</option>
+                <option>Activo</option>
+                <option>Frecuente</option>
+                <option>Inactivo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-burly" type="submit">Guardar cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL ELIMINAR CLIENTE -->
+  <div class="modal fade" id="modalDelCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" id="formDelCliente">
+        <div class="modal-header">
+          <h5 class="modal-title">Eliminar cliente</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" id="dcl_id">
+          <p class="mb-0">¿Eliminar cliente <strong id="dcl_name"></strong>?</p>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-danger" type="submit">Eliminar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="bg-dark text-center text-white py-4 mt-5">
+    <p class="mb-0"><span style="color: burlywood; font-weight: bold;">&copy; 2025 Thrift Cálido Bazar</span> — Admin CRM</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../src/js/api.js"></script>
+  <script src="../src/js/navbar-role.js"></script>
+  <script src="../src/js/admin-crm.js"></script>
+  <script>
+    function cerrarSesion() {
+      clearSession();
+      window.location.href = "../login.html";
+    }
+  </script>
+</body>
+</html>
