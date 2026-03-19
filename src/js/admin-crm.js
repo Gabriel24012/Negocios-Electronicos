@@ -39,9 +39,12 @@
   const hist_cliente = document.getElementById("hist_cliente");
   const msg_cliente = document.getElementById("msg_cliente");
   const mensajesCRMBody = document.getElementById("mensajesCRMBody");
+  const tabMetricasCRMButton = document.querySelector('[data-bs-target="#tabMetricasCRM"]');
+  const tabMetricasCRM = document.getElementById("tabMetricasCRM");
 
   let CLIENTES = [];
   let chartCRMEtapas;
+  let resumenCRMActual = null;
 
   function showMsg(text, type = "success") {
     msgBox.innerHTML = `<div class="alert alert-${type}">${text}</div>`;
@@ -207,38 +210,64 @@
 
     if (chartCRMEtapas) chartCRMEtapas.destroy();
 
+    const etapas = [
+      Number(data?.Prospecto || 0),
+      Number(data?.Activo || 0),
+      Number(data?.Frecuente || 0),
+      Number(data?.Inactivo || 0)
+    ];
+
+    const total = etapas.reduce((acc, value) => acc + value, 0);
+    const hasData = total > 0;
+
     chartCRMEtapas = new Chart(ctx, {
       type: "doughnut",
       data: {
-        labels: ["Prospecto", "Activo", "Frecuente", "Inactivo"],
+        labels: hasData ? ["Prospecto", "Activo", "Frecuente", "Inactivo"] : ["Sin datos CRM"],
         datasets: [{
-          data: [
-            data?.Prospecto || 0,
-            data?.Activo || 0,
-            data?.Frecuente || 0,
-            data?.Inactivo || 0
-          ]
+          data: hasData ? etapas : [1],
+          backgroundColor: hasData
+            ? ["#6c757d", "#198754", "#0d6efd", "#dc3545"]
+            : ["#cbd5e1"]
         }]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: true,
         plugins: {
-          legend: { position: "bottom" }
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label(context) {
+                if (!hasData) return "Sin clientes registrados";
+                return `${context.label}: ${context.raw}`;
+              }
+            }
+          }
         }
       }
+    });
+  }
+
+  function refreshMetricasChartIfVisible() {
+    if (!tabMetricasCRM?.classList.contains("active") || !resumenCRMActual) return;
+
+    window.requestAnimationFrame(() => {
+      renderChartCRMEtapas(resumenCRMActual.por_etapa || {});
     });
   }
 
   async function loadMetricasCRM() {
     const resumen = await apiFetch("/metricas/crm/resumen", { method: "GET" });
     const riesgo = await apiFetch("/metricas/crm/clientes-riesgo", { method: "GET" });
+    resumenCRMActual = resumen;
 
     document.getElementById("kpiTotalClientes").textContent = resumen.total_clientes ?? 0;
     document.getElementById("kpiActivosCRM").textContent = resumen.activos ?? 0;
     document.getElementById("kpiInactivosCRM").textContent = resumen.inactivos ?? 0;
     document.getElementById("kpiRiesgoCRM").textContent = riesgo.length ?? 0;
 
-    renderChartCRMEtapas(resumen.por_etapa || {});
+    refreshMetricasChartIfVisible();
 
     if (!riesgo.length) {
       riesgoBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Sin clientes en riesgo</td></tr>`;
@@ -400,6 +429,11 @@
     } catch (e) {
       showMsg("❌ " + e.message, "danger");
     }
+  });
+
+  tabMetricasCRMButton?.addEventListener("shown.bs.tab", () => {
+    if (!resumenCRMActual) return;
+    refreshMetricasChartIfVisible();
   });
 
   document.addEventListener("click", (e) => {
